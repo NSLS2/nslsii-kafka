@@ -24,20 +24,23 @@ def test_configure_logger_without_loki_secret(monkeypatch):
 
     logger = logging.getLogger(prefect_consumer.__name__)
     original_handlers = list(logger.handlers)
+    original_level = logger.level
     logger.handlers.clear()
+    logger.setLevel(logging.NOTSET)
     try:
         configured_logger = configure_logger()
         assert configured_logger is logger
-        assert configured_logger.getEffectiveLevel() == logging.WARNING
+        assert configured_logger.getEffectiveLevel() == logging.INFO
         assert len(configured_logger.handlers) == 1
         assert isinstance(configured_logger.handlers[0], logging.StreamHandler)
         mock_loki_handler.assert_not_called()
     finally:
         logger.handlers[:] = original_handlers
+        logger.setLevel(original_level)
 
 
 def test_configure_logger_with_loki_secret(monkeypatch):
-    "Test that LokiLoggerHandler is used when LOKI_PUSH_SECRET is set"
+    "Test that LokiLoggerHandler is used at INFO level when LOKI_PUSH_SECRET is set"
     monkeypatch.setenv("LOKI_PUSH_SECRET", "test-secret")
     fake_handler = logging.NullHandler()
     mock_loki_handler = MagicMock(return_value=fake_handler)
@@ -45,14 +48,17 @@ def test_configure_logger_with_loki_secret(monkeypatch):
 
     logger = logging.getLogger(prefect_consumer.__name__)
     original_handlers = list(logger.handlers)
+    original_level = logger.level
     logger.handlers.clear()
+    logger.setLevel(logging.NOTSET)
     try:
         configured_logger = configure_logger()
         assert configured_logger is logger
-        assert configured_logger.getEffectiveLevel() == logging.WARNING
+        assert configured_logger.getEffectiveLevel() == logging.INFO
         assert configured_logger.handlers == [fake_handler]
         mock_loki_handler.assert_called_once()
         _, kwargs = mock_loki_handler.call_args
         assert kwargs["additional_headers"] == {"loki-push-secret": "test-secret"}
     finally:
         logger.handlers[:] = original_handlers
+        logger.setLevel(original_level)

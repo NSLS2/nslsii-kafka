@@ -39,6 +39,7 @@ def parse_bluesky_kafka_config_file(config_file_path):
 
 def configure_logger():
     logger = logging.getLogger(__name__)
+    logger.setLevel(logging.INFO)
 
     loki_push_secret = os.environ.get("LOKI_PUSH_SECRET")
     if loki_push_secret:
