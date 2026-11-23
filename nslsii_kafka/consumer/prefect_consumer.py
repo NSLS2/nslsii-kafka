@@ -37,21 +37,29 @@ def parse_bluesky_kafka_config_file(config_file_path):
     return bootstrap_servers, security_config
 
 
+def configure_logger():
+    logger = logging.getLogger(__name__)
+
+    loki_push_secret = os.environ.get("LOKI_PUSH_SECRET")
+    if loki_push_secret:
+        handler = LokiLoggerHandler(
+            url="https://loki-push-applications.nsls2.bnl.gov/loki/api/v1/push",
+            labels={"job": "prefect_consumer", "host": socket.gethostname()},
+            label_keys=["level"],
+            additional_headers={
+                "loki-push-secret": loki_push_secret,
+            },
+        )
+    else:
+        handler = logging.StreamHandler()
+
+    logger.addHandler(handler)
+    return logger
+
+
 def message_to_workflow():
     args = get_arg_parser().parse_args()
-
-    handler = LokiLoggerHandler(
-        url="https://loki-push-applications.nsls2.bnl.gov/loki/api/v1/push",
-        labels={"job": "prefect_consumer", "host": socket.gethostname()},
-        label_keys=["level"],
-        additional_headers={
-            "loki-push-secret": os.environ["LOKI_PUSH_SECRET"],
-        },
-    )
-
-    logger = logging.getLogger(__name__)
-    logger.addHandler(handler)
-    logger.setLevel(logging.INFO)
+    logger = configure_logger()
 
     bootstrap_servers, security_config = parse_bluesky_kafka_config_file(config_file_path=args.kafka_config_file)
     print(f"bootstrap_servers:\n{pformat(bootstrap_servers)}")
