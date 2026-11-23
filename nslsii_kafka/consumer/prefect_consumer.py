@@ -11,17 +11,6 @@ from nslsii.kafka_utils import _read_bluesky_kafka_config_file
 from prefect.deployments import run_deployment
 
 
-handler = LokiLoggerHandler(
-    url="https://loki-push-applications.nsls2.bnl.gov/loki/api/v1/push",
-    labels={"job": "prefect_consumer", "host": socket.gethostname()},
-    label_keys=["level"],
-    additional_headers={
-        "loki-push-secret": os.environ["LOKI_PUSH_SECRET"],
-    },
-)
-logging.getLogger().addHandler(handler)
-
-
 def get_arg_parser():
     arg_parser = argparse.ArgumentParser(description="Run a Prefect 2 workflow in response to a Kafka message.")
     arg_parser.add_argument("endstation")
@@ -50,7 +39,18 @@ def parse_bluesky_kafka_config_file(config_file_path):
 
 def message_to_workflow():
     args = get_arg_parser().parse_args()
+
+    handler = LokiLoggerHandler(
+        url="https://loki-push-applications.nsls2.bnl.gov/loki/api/v1/push",
+        labels={"job": "prefect_consumer", "host": socket.gethostname()},
+        label_keys=["level"],
+        additional_headers={
+            "loki-push-secret": os.environ["LOKI_PUSH_SECRET"],
+        },
+    )
+
     logger = logging.getLogger(__name__)
+    logger.addHandler(handler)
     logger.setLevel(logging.INFO)
 
     bootstrap_servers, security_config = parse_bluesky_kafka_config_file(config_file_path=args.kafka_config_file)
