@@ -1,4 +1,5 @@
 bluesky-kafka
 event-model
+loki-logger-handler
 nslsii
 prefect
